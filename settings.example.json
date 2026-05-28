@@ -1,0 +1,29 @@
+{
+  "language": "en",
+
+  "ui": {
+    "pageTitle": "GoblinFTP",
+    "showDotFiles": false,
+    "showNavigationHistory": true,
+    "helpUrl": null
+  },
+
+  "editor": {
+    "openOnCreate": false,
+    "allowedExtensions": ["txt", "htm", "html", "php", "js", "css", "xml", "json", "py", "rb", "go", "sh"],
+    "disabled": false,
+    "viewOnly": false
+  },
+
+  "connection": {
+    "allowedTypes": ["ftp", "sftp"],
+    "disableChmod": false,
+    "requestTimeoutSeconds": 30
+  },
+
+  "access": {
+    "allowedClientAddresses": [],
+    "deniedMessage": null,
+    "postLogoutUrl": null
+  }
+}

@@ -4,3 +4,5 @@ mftp/
 bin/
 frontend/.output/
 frontend/node_modules/
+frontend/.nuxt/
+frontend/dist

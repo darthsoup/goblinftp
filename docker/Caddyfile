@@ -1,0 +1,28 @@
+:80 {
+	@sso {
+		path /
+		query sso=*
+	}
+
+	# API requests → Go binary
+	handle /api/* {
+		reverse_proxy localhost:8080
+	}
+
+	# Health check → Go binary
+	handle /healthz {
+		reverse_proxy localhost:8080
+	}
+
+	# SSO entry point → Go binary (must intercept before SPA fallback)
+	handle @sso {
+		reverse_proxy localhost:8080
+	}
+
+	# All other requests → Nuxt SPA with HTML5 history fallback
+	handle {
+		root * /app/public
+		try_files {path} /index.html
+		file_server
+	}
+}

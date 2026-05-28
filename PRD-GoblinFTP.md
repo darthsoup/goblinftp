@@ -80,7 +80,7 @@ The container is **fully stateless**. `/app/data` (temp upload/download files) i
 
 | Concern | Library |
 |---------|---------|
-| HTTP framework | Echo or Chi |
+| HTTP framework | Echo |
 | FTP | `github.com/goftp/ftp` |
 | SFTP | `golang.org/x/crypto/ssh` + `github.com/pkg/sftp` |
 | Configuration | `github.com/caarlos0/env` |
@@ -88,7 +88,7 @@ The container is **fully stateless**. `/app/data` (temp upload/download files) i
 | Error tracking | `github.com/getsentry/sentry-go` |
 | Encryption | stdlib `crypto/aes`, `crypto/hmac` |
 | Testing | stdlib `testing` + `github.com/stretchr/testify` |
-| Archive | `archive/zip` (stdlib) + `github.com/mholt/archiver` for tar/bz2 |
+| Archive | `archive/zip` (stdlib) + `github.com/mholt/archives` for tar/bz2 |
 
 ---
 
@@ -113,18 +113,20 @@ type ServerConfig struct {
     Port          int           `env:"GFTP_PORT"           envDefault:"8080"`
     PageTitle     string        `env:"GFTP_PAGE_TITLE"     envDefault:"GoblinFTP"`
     MaxFileSize   string        `env:"GFTP_MAX_FILE_SIZE"  envDefault:"2G"`
-    ChunkSize     string        `env:"GFTP_CHUNK_SIZE"     envDefault:"default"`
+    ChunkSize     string        `env:"GFTP_CHUNK_SIZE"     envDefault:"5MB"`
     Timezone      string        `env:"GFTP_TIMEZONE"       envDefault:"UTC"`
-    DownloadSecret string       `env:"GFTP_DOWNLOAD_TOKEN_SECRET,required"`
+    DownloadSecret string       `env:"GFTP_DOWNLOAD_TOKEN_SECRET"` // auto-generated if empty
 }
 
 type AuthConfig struct {
     MaxLoginFailures    int           `env:"GFTP_MAX_LOGIN_FAILURES"         envDefault:"5"`
     LoginFailuresReset  time.Duration `env:"GFTP_LOGIN_FAILURES_RESET"       envDefault:"5m"`
     DisableFailureBan   bool          `env:"GFTP_DISABLE_LOGIN_FAILURE_BAN"  envDefault:"false"`
-    SessionSecret       string        `env:"GFTP_SESSION_SECRET,required"`
+    SessionSecret       string        `env:"GFTP_SESSION_SECRET"`                                             // auto-generated if empty
     SessionLifetime     time.Duration `env:"GFTP_SESSION_LIFETIME"           envDefault:"24h"`
     RememberMeLifetime  time.Duration `env:"GFTP_REMEMBER_ME_LIFETIME"       envDefault:"720h"` // 30 days
+    DisableLoginForm    bool          `env:"GFTP_DISABLE_LOGIN_FORM"         envDefault:"false"`
+    LoginDisabledRedirect string      `env:"GFTP_LOGIN_DISABLED_REDIRECT"`   // if set, redirect here; else 404
 }
 
 type SSOConfig struct {
@@ -157,6 +159,8 @@ type StorageConfig struct {
     StorageDir string `env:"GFTP_STORAGE_DIR" envDefault:"/app/storage"`
 }
 ```
+
+**Auto-generated secrets:** If `GFTP_SESSION_SECRET` or `GFTP_DOWNLOAD_TOKEN_SECRET` are empty, `config.Load()` generates a cryptographically random 32-byte value (hex-encoded) at startup and logs a `warn`-level message. This allows zero-config container startup — but note that sessions and download tokens are invalidated on every restart when secrets are not persisted.
 
 ### settings.json (user-facing, optional volume mount)
 
@@ -270,7 +274,7 @@ clean:        # rm -rf frontend/.output frontend/node_modules bin/
 | AUTH-6 | CSRF protection on all state-changing API endpoints |
 | AUTH-8 | SSO login link — see §8.1.1 |
 | AUTH-9 | Active connection stored in session; credentials not re-sent per request |
-| AUTH-10 | Configurable option to disable the login form entirely (external auth / SSO-only mode) |
+| AUTH-10 | When the login form is disabled (`GFTP_DISABLE_LOGIN_FORM=true`), direct visits without a valid SSO token respond with **HTTP 404** if `GFTP_LOGIN_DISABLED_REDIRECT` is unset, or **HTTP 302** to `GFTP_LOGIN_DISABLED_REDIRECT` if set. This hides the app from unauthorised users. |
 
 #### 8.1.1 SSO Login Link (AUTH-8)
 
@@ -408,7 +412,7 @@ return redirect($url);
 | BROWSE-6 | Breadcrumb bar (path history, collapsible) |
 | BROWSE-7 | `..` parent directory entry |
 | BROWSE-8 | Context menu per file row (see §8.4) |
-| BROWSE-9 | Multi-select via mouse drag or click |
+| BROWSE-9 | Multi-select via click, Shift-click (range), and Ctrl/Cmd-click (toggle) |
 
 ### 8.3 File Transfer
 
@@ -416,7 +420,7 @@ return redirect($url);
 |----|-------------|
 | XFER-1 | Upload single or multiple files via file picker |
 | XFER-2 | Drag-and-drop upload onto the file browser |
-| XFER-3 | Chunked upload for large files (configurable chunk size; auto-detected from server limits) |
+| XFER-3 | Chunked upload for large files; chunk size configurable via `GFTP_CHUNK_SIZE` (default: 5 MB) |
 | XFER-4 | Upload retry with exponential backoff on transient errors (up to 5 attempts) |
 | XFER-5 | Upload to a new subdirectory in one operation (create dir then upload) |
 | XFER-6 | Transfer progress UI: filename, bytes transferred / total, transfer rate, `N of M` counter |
@@ -447,14 +451,13 @@ return redirect($url);
 
 | ID | Requirement |
 |----|-------------|
-| EDIT-1 | Open text files in an embedded Monaco (VS Code) editor |
+| EDIT-1 | Open text files in an embedded CodeMirror 6 editor with syntax highlighting |
 | EDIT-2 | Configurable list of editable file extensions |
 | EDIT-3 | Read-only "view" mode when editing is disabled |
 | EDIT-4 | Multi-tab editor — open multiple files, switch between them |
 | EDIT-5 | Unsaved-change indicator on tab |
-| EDIT-6 | Save file (overwrite on remote) |
+| EDIT-6 | Save file (overwrite on remote); files transferred in binary mode (no line-ending conversion) |
 | EDIT-7 | Auto-save toggle |
-| EDIT-8 | Configurable line separator (LF / CRLF / CR) |
 
 ### 8.6 Internationalisation
 
@@ -598,8 +601,6 @@ gftp/
 ```
 POST   /api/auth/connect              # Connect + authenticate
 POST   /api/auth/disconnect           # Logout
-POST   /api/auth/reset-password
-POST   /api/auth/forgot-password
 
 GET    /api/files?path=               # listDirectory
 POST   /api/files/directory           # makeDirectory
@@ -608,9 +609,8 @@ PATCH  /api/files/rename              # rename / move
 PATCH  /api/files/copy                # copy
 PATCH  /api/files/permissions         # CHMOD
 
-GET    /api/files/download            # Single file download
+GET    /api/files/download            # Single file download (Content-Length set from remote Stat())
 POST   /api/files/download-zip        # Multi-file ZIP download
-GET    /api/files/size                # getRemoteFileSize
 
 POST   /api/files/upload              # Single-shot upload
 POST   /api/files/upload/reserve      # Reserve chunked upload slot
@@ -637,7 +637,7 @@ All API responses: `{ "success": true|false, "data": …, "errors": [] }`. Stand
 | Styling | Tailwind CSS v4 (bundled with Nuxt UI v3) |
 | State | Pinia (`@pinia/nuxt`) |
 | i18n | `@nuxtjs/i18n` v9 |
-| Editor | Monaco Editor via `monaco-editor` + Nuxt plugin |
+| Editor | CodeMirror 6 (`@codemirror/view`, `@codemirror/state`, language packs) |
 | Error tracking | `@sentry/nuxtjs` |
 | Testing | Vitest + `@nuxt/test-utils` |
 | Type safety | TypeScript throughout |
@@ -682,6 +682,12 @@ Nuxt SPA loads   →  detects pre-auth session, calls /api/auth/connect
 
 | # | Question | Decision |
 |---|----------|----------|
+| OQ-1 | HTTP framework: Echo or Chi? | **Echo** — batteries-included middleware, binder, validator |
 | OQ-2 | Nuxt SPA served from same container (Caddy) or CDN? | **Same container** — Caddy serves both the Go API and the static SPA |
 | OQ-3 | Does `/app/data` need persistence between restarts? | **No** — fully ephemeral; container is stateless, no volume mount required |
 | OQ-4 | SSO one-time-use: in-memory set or shared store? | **In-memory** — simple single-instance enforcement; Redis not required |
+| OQ-5 | Multi-select: rubber-band drag or click-based? | **Click/Shift/Ctrl-click only** — avoids conflict with drag-and-drop upload |
+| OQ-6 | File size API endpoint or `Content-Length` header? | **`Content-Length` header** — size already in listing; no extra round-trip |
+| OQ-7 | Required secrets: hard-fail or auto-generate? | **Auto-generate** with `warn` log — zero-config startup, invalidated on restart |
+| OQ-8 | Configurable line separator in editor? | **Dropped** — binary transfer + CodeMirror 6's built-in line ending handling covers it |
+| OQ-9 | Chunk size auto-detection? | **Dropped** — manual via `GFTP_CHUNK_SIZE` (default 5 MB) |

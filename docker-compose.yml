@@ -1,0 +1,17 @@
+services:
+  gftp:
+    build: .
+    image: goblintools/gftp
+    ports:
+      - "8080:80"
+    environment:
+      GFTP_PAGE_TITLE: "${GFTP_PAGE_TITLE:-GoblinFTP}"
+      GFTP_SESSION_SECRET: "${GFTP_SESSION_SECRET:-}"
+      GFTP_DOWNLOAD_TOKEN_SECRET: "${GFTP_DOWNLOAD_TOKEN_SECRET:-}"
+      GFTP_SSO_ENABLED: "${GFTP_SSO_ENABLED:-false}"
+      GFTP_SSO_SECRET: "${GFTP_SSO_SECRET:-}"
+      GFTP_SENTRY_DSN: "${GFTP_SENTRY_DSN:-}"
+    # Uncomment to mount custom settings:
+    # volumes:
+    #   - ./settings.json:/app/settings.json:ro
+    restart: unless-stopped
