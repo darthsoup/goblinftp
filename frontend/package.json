@@ -1,0 +1,29 @@
+{
+  "name": "goblinftp-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "nuxt typecheck"
+  },
+  "dependencies": {
+    "@nuxt/ui": "^3.0.0",
+    "@nuxtjs/i18n": "^9.0.0",
+    "@pinia/nuxt": "^0.9.0",
+    "nuxt": "^3.15.0",
+    "pinia": "^2.3.0"
+  },
+  "devDependencies": {
+    "@nuxt/test-utils": "3.15.4",
+    "@vue/test-utils": "^2.4.0",
+    "happy-dom": "^15.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.0.0",
+    "vue-tsc": "^3.3.2"
+  }
+}
