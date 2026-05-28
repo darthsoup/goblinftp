@@ -1,0 +1,6 @@
+mftp/
+.DS_Store
+.worktrees/
+bin/
+frontend/.output/
+frontend/node_modules/
