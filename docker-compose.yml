@@ -1,6 +1,8 @@
 services:
   gftp:
-    build: .
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
     image: goblintools/gftp
     ports:
       - "8080:80"
