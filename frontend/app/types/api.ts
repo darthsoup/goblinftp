@@ -1,7 +1,7 @@
 export interface ApiEnvelope<T> {
   success: boolean
   data?: T
-  errors?: Array<{ code: string; message: string }>
+  errors?: Array<{ code: string, message: string }>
 }
 
 export interface AuthStatus {
@@ -29,8 +29,8 @@ export interface FileInfo {
   name: string
   size: number
   isDir: boolean
-  modified: string  // RFC3339
-  mode: string      // e.g., "drwxr-xr-x"
+  modified: string // RFC3339
+  mode: string // e.g., "drwxr-xr-x"
 }
 
 export interface SystemVars {
@@ -41,7 +41,7 @@ export interface SystemVars {
     showNavigationHistory: boolean
   }
   upload: { chunkSize: number }
-  connection: { allowedTypes: string[]; disableChmod: boolean }
+  connection: { allowedTypes: string[], disableChmod: boolean }
   loginFormDisabled: boolean
   ssoEnabled: boolean
 }

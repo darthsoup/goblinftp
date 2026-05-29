@@ -13,7 +13,8 @@ export function useApi() {
     const upper = method.toUpperCase()
     if (upper !== 'GET' && upper !== 'HEAD') {
       const csrf = getCsrfToken()
-      if (csrf) headers['X-CSRF-Token'] = csrf
+      if (csrf)
+        headers['X-CSRF-Token'] = csrf
     }
 
     try {
@@ -27,8 +28,10 @@ export function useApi() {
         throw new ApiError(err?.code ?? 'ERR_UNKNOWN', err?.message ?? 'Request failed')
       }
       return response.data as T
-    } catch (e) {
-      if (e instanceof ApiError) throw e
+    }
+    catch (e) {
+      if (e instanceof ApiError)
+        throw e
       // ofetch throws FetchError on non-2xx
       const msg = e instanceof Error ? e.message : 'Network error'
       throw new ApiError('ERR_NETWORK', msg)

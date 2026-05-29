@@ -22,15 +22,18 @@ watch(() => form.protocol, (proto) => {
 })
 
 async function handleSubmit() {
-  if (!form.host || !form.username) return
+  if (!form.host || !form.username)
+    return
   loading.value = true
   error.value = null
   try {
     await authStore.connect({ ...form })
     await filesStore.list(authStore.initialDirectory)
-  } catch (e) {
+  }
+  catch (e) {
     error.value = e instanceof ApiError ? e.message : t('error.connectionFailed')
-  } finally {
+  }
+  finally {
     loading.value = false
   }
 }
@@ -41,7 +44,9 @@ async function handleSubmit() {
     <div class="w-full max-w-md bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
       <div class="flex items-center justify-center gap-2 mb-6">
         <UIcon name="i-heroicons-server" class="w-8 h-8 text-primary-500" />
-        <h1 class="text-2xl font-bold">GoblinFTP</h1>
+        <h1 class="text-2xl font-bold">
+          GoblinFTP
+        </h1>
       </div>
 
       <UAlert

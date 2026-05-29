@@ -1,5 +1,5 @@
-import { defineStore } from 'pinia'
 import type { FileInfo } from '~/types/api'
+import { defineStore } from 'pinia'
 import { ApiError } from '~/types/api'
 
 export const useFilesStore = defineStore('files', () => {
@@ -19,9 +19,11 @@ export const useFilesStore = defineStore('files', () => {
       files.value = result
       currentPath.value = target
       selected.value = new Set()
-    } catch (e) {
+    }
+    catch (e) {
       error.value = e instanceof ApiError ? e.message : 'Failed to list directory'
-    } finally {
+    }
+    finally {
       loading.value = false
     }
   }
@@ -33,7 +35,7 @@ export const useFilesStore = defineStore('files', () => {
   async function navigateUp() {
     const parts = currentPath.value.split('/').filter(Boolean)
     parts.pop()
-    const parent = parts.length > 0 ? '/' + parts.join('/') : '/'
+    const parent = parts.length > 0 ? `/${parts.join('/')}` : '/'
     await navigate(parent)
   }
 
@@ -46,7 +48,8 @@ export const useFilesStore = defineStore('files', () => {
 
   function toggleSelection(name: string) {
     const next = new Set(selected.value)
-    if (next.has(name)) next.delete(name)
+    if (next.has(name))
+      next.delete(name)
     else next.add(name)
     selected.value = next
   }
@@ -67,10 +70,10 @@ export const useFilesStore = defineStore('files', () => {
     const parts = currentPath.value.split('/').filter(Boolean)
     return parts.reduce(
       (acc, part, i) => {
-        acc.push({ label: part, path: '/' + parts.slice(0, i + 1).join('/') })
+        acc.push({ label: part, path: `/${parts.slice(0, i + 1).join('/')}` })
         return acc
       },
-      [] as Array<{ label: string; path: string }>
+      [] as Array<{ label: string, path: string }>,
     )
   })
 

@@ -1,5 +1,5 @@
-import { defineStore } from 'pinia'
 import type { AuthStatus, ConnectData, ConnectRequest, SystemVars } from '~/types/api'
+import { defineStore } from 'pinia'
 import { ApiError } from '~/types/api'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -16,18 +16,22 @@ export const useAuthStore = defineStore('auth', () => {
   // (no CSRF needed for these GET requests, and avoids circular dep with useApi)
   async function init() {
     try {
-      const svRes = await $fetch<{ success: boolean; data?: SystemVars }>('/api/system/vars')
-      if (svRes.success && svRes.data) systemVars.value = svRes.data
-    } catch {}
+      const svRes = await $fetch<{ success: boolean, data?: SystemVars }>('/api/system/vars')
+      if (svRes.success && svRes.data)
+        systemVars.value = svRes.data
+    }
+    catch {}
 
     try {
-      const statusRes = await $fetch<{ success: boolean; data?: AuthStatus }>('/api/auth/status')
+      const statusRes = await $fetch<{ success: boolean, data?: AuthStatus }>('/api/auth/status')
       if (statusRes.success && statusRes.data) {
         connected.value = statusRes.data.connected
         ssoAutoConnect.value = statusRes.data.ssoAutoConnect
-        if (statusRes.data.csrfToken) csrfToken.value = statusRes.data.csrfToken
+        if (statusRes.data.csrfToken)
+          csrfToken.value = statusRes.data.csrfToken
       }
-    } catch {}
+    }
+    catch {}
   }
 
   // SSO auto-connect: called when ssoAutoConnect=true after init()
@@ -42,9 +46,11 @@ export const useAuthStore = defineStore('auth', () => {
       ssoAutoConnect.value = false
       initialDirectory.value = data.initialDirectory
       capabilities.value = data.capabilities
-    } catch (e) {
+    }
+    catch (e) {
       error.value = e instanceof ApiError ? e.message : 'SSO connect failed'
-    } finally {
+    }
+    finally {
       loading.value = false
     }
   }
@@ -55,9 +61,9 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
     try {
       // POST /api/auth/connect is public (no CSRF), use $fetch directly
-      const res = await $fetch<{ success: boolean; data?: ConnectData; errors?: Array<{ code: string; message: string }> }>(
+      const res = await $fetch<{ success: boolean, data?: ConnectData, errors?: Array<{ code: string, message: string }> }>(
         '/api/auth/connect',
-        { method: 'POST', body: req }
+        { method: 'POST', body: req },
       )
       if (!res.success) {
         const err = res.errors?.[0]
@@ -68,10 +74,12 @@ export const useAuthStore = defineStore('auth', () => {
       connected.value = true
       initialDirectory.value = data.initialDirectory
       capabilities.value = data.capabilities
-    } catch (e) {
+    }
+    catch (e) {
       error.value = e instanceof ApiError ? e.message : 'Connection failed'
       throw e
-    } finally {
+    }
+    finally {
       loading.value = false
     }
   }
@@ -80,7 +88,8 @@ export const useAuthStore = defineStore('auth', () => {
     const api = useApi()
     try {
       await api.post('/api/auth/disconnect')
-    } catch {}
+    }
+    catch {}
     // Reset state regardless of API result
     csrfToken.value = ''
     connected.value = false
@@ -89,7 +98,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const allowedTypes = computed(() =>
-    systemVars.value?.connection.allowedTypes ?? ['ftp', 'sftp']
+    systemVars.value?.connection.allowedTypes ?? ['ftp', 'sftp'],
   )
 
   return {
