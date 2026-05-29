@@ -74,8 +74,12 @@ func (h *Handler) UploadChunk(c echo.Context) error {
 		return Fail(c, gftperrors.New(gftperrors.ErrBadRequest, "invalid chunkIndex"))
 	}
 	uploads := getUploadsMap(sess)
-	if _, ok := uploads[uploadID]; !ok {
+	meta, ok := uploads[uploadID]
+	if !ok {
 		return Fail(c, gftperrors.New(gftperrors.ErrUploadNotFound, "upload not found"))
+	}
+	if chunkIndex < 0 || chunkIndex >= meta.TotalChunks {
+		return Fail(c, gftperrors.New(gftperrors.ErrBadRequest, "chunkIndex out of range"))
 	}
 	fh, err := c.FormFile("chunk")
 	if err != nil {
@@ -126,6 +130,9 @@ func (h *Handler) UploadCommit(c echo.Context) error {
 	return OK(c, nil)
 }
 
+// NOTE: Session.Data is not protected by a mutex. Concurrent requests
+// to the same session's upload endpoints may race. This is acceptable
+// for the typical single-user FTP client use case.
 func getUploadsMap(sess *auth.Session) map[string]*transfer.UploadMeta {
 	if m, ok := sess.Data[transfer.SessionUploadsKey]; ok {
 		if uploads, ok := m.(map[string]*transfer.UploadMeta); ok {

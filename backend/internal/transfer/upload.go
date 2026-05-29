@@ -6,10 +6,21 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sync"
 
 	"github.com/google/uuid"
 )
+
+var uuidRe = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+
+// validateUploadID returns an error if id is not a valid UUID.
+func validateUploadID(id string) error {
+	if !uuidRe.MatchString(id) {
+		return fmt.Errorf("invalid upload ID: %q", id)
+	}
+	return nil
+}
 
 const SessionUploadsKey = "uploads"
 
@@ -86,6 +97,9 @@ func NewUpload(dataDir, destination string, totalChunks int, chunkSize int64) (*
 
 // WriteChunk writes a chunk to the upload directory.
 func WriteChunk(dataDir, uploadID string, index int, r io.Reader) error {
+	if err := validateUploadID(uploadID); err != nil {
+		return err
+	}
 	name := filepath.Join(dataDir, uploadID, fmt.Sprintf("%04d", index))
 	f, err := os.Create(name)
 	if err != nil {
@@ -98,6 +112,17 @@ func WriteChunk(dataDir, uploadID string, index int, r io.Reader) error {
 
 // AssembleReader returns an io.ReadCloser that reads all chunks in order.
 func AssembleReader(dataDir, uploadID string, totalChunks int) (io.ReadCloser, error) {
+	if err := validateUploadID(uploadID); err != nil {
+		return nil, err
+	}
+	// Verify all chunks exist before opening any
+	for i := 0; i < totalChunks; i++ {
+		name := filepath.Join(dataDir, uploadID, fmt.Sprintf("%04d", i))
+		if _, err := os.Stat(name); err != nil {
+			return nil, fmt.Errorf("chunk %d missing: %w", i, err)
+		}
+	}
+	// Then open them
 	readers := make([]io.Reader, totalChunks)
 	closers := make([]io.Closer, totalChunks)
 	for i := 0; i < totalChunks; i++ {
@@ -134,5 +159,8 @@ func (m *multiReadCloser) Close() error {
 
 // Cleanup removes the upload directory.
 func Cleanup(dataDir, uploadID string) error {
+	if err := validateUploadID(uploadID); err != nil {
+		return err
+	}
 	return os.RemoveAll(filepath.Join(dataDir, uploadID))
 }
