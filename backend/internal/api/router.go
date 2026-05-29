@@ -27,10 +27,10 @@ func Register(e *echo.Echo, cfg *config.Config, store *auth.Store, thr *auth.Thr
 		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 	})
 
-	// Public routes (no auth required)
-	e.GET("/api/system/vars", NotImplemented)
-
 	h := newHandler(cfg, store, thr, opts)
+
+	// Public routes (no auth required)
+	e.GET("/api/system/vars", h.SystemVars)
 
 	apiGroup := e.Group("/api")
 	apiGroup.Use(csrfMiddleware(store))
