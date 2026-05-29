@@ -29,6 +29,10 @@ func Register(e *echo.Echo, cfg *config.Config, store *auth.Store, thr *auth.Thr
 
 	h := newHandler(cfg, store, thr, opts)
 
+	// SSO entry point and auth status (public, no CSRF required)
+	e.GET("/", h.SSOLogin)
+	e.GET("/api/auth/status", h.AuthStatus)
+
 	// Public routes (no auth required)
 	e.GET("/api/system/vars", h.SystemVars)
 	e.GET("/api/files/download", h.DownloadFile)
@@ -39,6 +43,7 @@ func Register(e *echo.Echo, cfg *config.Config, store *auth.Store, thr *auth.Thr
 	// Auth
 	apiGroup.POST("/auth/connect", h.Connect)
 	apiGroup.POST("/auth/disconnect", requireSession(store)(h.Disconnect))
+	apiGroup.POST("/auth/sso-connect", requireSession(store)(h.SSOConnect))
 
 	// File operations — Phase 3
 	apiGroup.GET("/files", requireSession(store)(h.ListFiles))

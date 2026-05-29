@@ -4,6 +4,7 @@ package api
 import (
 	"github.com/darthsoup/goblinftp/internal/auth"
 	"github.com/darthsoup/goblinftp/internal/config"
+	"github.com/darthsoup/goblinftp/internal/sso"
 	"github.com/darthsoup/goblinftp/internal/transfer"
 )
 
@@ -27,6 +28,7 @@ type Handler struct {
 	throttle *auth.Throttle
 	dataDir  string
 	dial     DialFunc
+	ssoUsed  *sso.UsedSet
 }
 
 func newHandler(cfg *config.Config, store *auth.Store, thr *auth.Throttle, opts []HandlerOption) *Handler {
@@ -36,6 +38,7 @@ func newHandler(cfg *config.Config, store *auth.Store, thr *auth.Throttle, opts 
 		throttle: thr,
 		dataDir:  cfg.DataDir,
 		dial:     defaultDial,
+		ssoUsed:  sso.NewUsedSet(),
 	}
 	for _, opt := range opts {
 		opt(h)
