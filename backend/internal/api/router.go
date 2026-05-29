@@ -53,8 +53,8 @@ func Register(e *echo.Echo, cfg *config.Config, store *auth.Store, thr *auth.Thr
 	apiGroup.POST("/files/upload/reserve", requireSession(store)(h.UploadReserve))
 	apiGroup.POST("/files/upload/chunk", requireSession(store)(h.UploadChunk))
 	apiGroup.POST("/files/upload/commit", requireSession(store)(h.UploadCommit))
-	apiGroup.POST("/files/extract", requireSession(store)(NotImplemented))
-	apiGroup.POST("/files/zip", requireSession(store)(NotImplemented))
+	apiGroup.POST("/files/extract", requireSession(store)(h.ExtractArchive))
+	apiGroup.POST("/files/compress", requireSession(store)(h.CreateZip))
 
 	// System — Phase 3
 	apiGroup.POST("/system/settings", requireSession(store)(NotImplemented))
