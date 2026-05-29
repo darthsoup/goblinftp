@@ -31,6 +31,7 @@ func Register(e *echo.Echo, cfg *config.Config, store *auth.Store, thr *auth.Thr
 
 	// Public routes (no auth required)
 	e.GET("/api/system/vars", h.SystemVars)
+	e.GET("/api/files/download", h.DownloadFile)
 
 	apiGroup := e.Group("/api")
 	apiGroup.Use(csrfMiddleware(store))
@@ -46,8 +47,7 @@ func Register(e *echo.Echo, cfg *config.Config, store *auth.Store, thr *auth.Thr
 	apiGroup.PATCH("/files/rename", requireSession(store)(h.RenameFile))
 	apiGroup.PATCH("/files/copy", requireSession(store)(h.CopyFile))
 	apiGroup.PATCH("/files/permissions", requireSession(store)(h.SetPermissions))
-	apiGroup.GET("/files/download", requireSession(store)(NotImplemented))
-	apiGroup.POST("/files/download-token", requireSession(store)(NotImplemented))
+	apiGroup.POST("/files/download-token", requireSession(store)(h.IssueDownloadToken))
 	apiGroup.POST("/files/download-zip", requireSession(store)(NotImplemented))
 	apiGroup.POST("/files/upload", requireSession(store)(NotImplemented))
 	apiGroup.POST("/files/upload/reserve", requireSession(store)(NotImplemented))
