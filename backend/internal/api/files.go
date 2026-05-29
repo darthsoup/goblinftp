@@ -140,13 +140,13 @@ func (h *Handler) SetPermissions(c echo.Context) error {
 		return Fail(c, gftperrors.New(gftperrors.ErrSessionNotFound, "no active connection"))
 	}
 	var req struct {
-		Path string `json:"path"`
-		Mode uint32 `json:"mode"`
+		Path string  `json:"path"`
+		Mode *uint32 `json:"mode"`
 	}
-	if err := c.Bind(&req); err != nil || req.Path == "" {
+	if err := c.Bind(&req); err != nil || req.Path == "" || req.Mode == nil {
 		return Fail(c, gftperrors.New(gftperrors.ErrBadRequest, "path and mode are required"))
 	}
-	if err := client.Chmod(req.Path, req.Mode); err != nil {
+	if err := client.Chmod(req.Path, *req.Mode); err != nil {
 		if errors.Is(err, transfer.ErrPermissionsNotSupported) {
 			return Fail(c, gftperrors.New(gftperrors.ErrPermissionsNotSupported, "chmod not supported by server"))
 		}
