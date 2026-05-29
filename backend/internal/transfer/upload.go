@@ -2,16 +2,24 @@
 package transfer
 
 import (
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/google/uuid"
 )
 
+const SessionUploadsKey = "uploads"
+
 // UploadMeta tracks the state of an in-progress chunked upload.
 type UploadMeta struct {
+	ID             string
 	Destination    string
 	TotalChunks    int
 	ReceivedChunks int
+	ChunkSize      int64
 }
 
 // UploadStore is a thread-safe in-memory store for upload metadata.
@@ -59,4 +67,72 @@ func (s *UploadStore) Delete(id string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.uploads, id)
+}
+
+// NewUpload creates a temp directory for chunks and returns metadata.
+func NewUpload(dataDir, destination string, totalChunks int, chunkSize int64) (*UploadMeta, error) {
+	id := uuid.NewString()
+	dir := filepath.Join(dataDir, id)
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		return nil, err
+	}
+	return &UploadMeta{
+		ID:          id,
+		Destination: destination,
+		TotalChunks: totalChunks,
+		ChunkSize:   chunkSize,
+	}, nil
+}
+
+// WriteChunk writes a chunk to the upload directory.
+func WriteChunk(dataDir, uploadID string, index int, r io.Reader) error {
+	name := filepath.Join(dataDir, uploadID, fmt.Sprintf("%04d", index))
+	f, err := os.Create(name)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = io.Copy(f, r)
+	return err
+}
+
+// AssembleReader returns an io.ReadCloser that reads all chunks in order.
+func AssembleReader(dataDir, uploadID string, totalChunks int) (io.ReadCloser, error) {
+	readers := make([]io.Reader, totalChunks)
+	closers := make([]io.Closer, totalChunks)
+	for i := 0; i < totalChunks; i++ {
+		name := filepath.Join(dataDir, uploadID, fmt.Sprintf("%04d", i))
+		f, err := os.Open(name)
+		if err != nil {
+			// close already opened files
+			for j := 0; j < i; j++ {
+				closers[j].Close()
+			}
+			return nil, err
+		}
+		readers[i] = f
+		closers[i] = f
+	}
+	multi := io.MultiReader(readers...)
+	return &multiReadCloser{Reader: multi, closers: closers}, nil
+}
+
+type multiReadCloser struct {
+	io.Reader
+	closers []io.Closer
+}
+
+func (m *multiReadCloser) Close() error {
+	var last error
+	for _, c := range m.closers {
+		if err := c.Close(); err != nil {
+			last = err
+		}
+	}
+	return last
+}
+
+// Cleanup removes the upload directory.
+func Cleanup(dataDir, uploadID string) error {
+	return os.RemoveAll(filepath.Join(dataDir, uploadID))
 }
